@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi Agenda Pastelera</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#C0405F">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Agenda Pastelera">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F7EFE0;
+    --surface: #FFFDF8;
+    --kraft: #B78A5A;
+    --kraft-dark: #7A5230;
+    --berry: #C0405F;
+    --berry-dark: #97324A;
+    --mint: #6E9C7D;
+    --mint-bg: #E7F0E7;
+    --butter: #E3A62F;
+    --butter-bg: #FBF0D6;
+    --danger: #B94A3D;
+    --danger-bg: #F7E3DF;
+    --text: #3A2A1D;
+    --text-soft: #8A7658;
+    --text-soft2: #8A7658;
+    --line: #E5D7BF;
+    --radius-card: 14px;
+    --shadow: 0 2px 10px rgba(58,42,29,0.08);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Karla', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+  }
+  #app{
+    max-width: 720px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding-bottom: 84px;
+    position: relative;
+  }
+  .topbar{
+    padding: 22px 20px 16px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #FBF3E4, var(--bg));
+  }
+  .topbar h1{ font-size: 26px; letter-spacing:-0.01em;}
+  .topbar .sub{ font-size: 12.5px; color: var(--text-soft2); margin-top:2px;}
+  .topbar .badge{
+    font-family:'Fraunces',serif;
+    font-size: 12px;
+    color: var(--kraft-dark);
+    border: 1px solid var(--kraft);
+    padding: 3px 10px;
+    border-radius: 100px;
+    white-space:nowrap;
+  }
+  .view{ display:none; padding: 18px 18px 8px; animation: fadeIn .18s ease; }
+  .view.active{ display:block; }
+  @keyframes fadeIn{ from{opacity:0; transform: translateY(4px);} to{opacity:1; transform:none;} }
+
+  .section-head{ display:flex; align-items:center; justify-content:space-between; margin: 4px 0 14px; }
+  .section-head h2{ font-size: 20px; }
+  .add-btn{
+    background: var(--berry);
+    color:#fff;
+    border:none;
+    padding: 9px 16px;
+    border-radius: 100px;
+    font-family:'Karla',sans-serif;
+    font-weight:700;
+    font-size: 13.5px;
+    cursor:pointer;
+    box-shadow: 0 2px 8px rgba(192,64,95,0.3);
+  }
+  .add-btn:active{ transform: scale(0.97); }
+
+  .empty{
+    text-align:center;
+    padding: 46px 18px;
+    color: var(--text-soft2);
+  }
+  .empty .icon{ font-size: 34px; display:block; margin-bottom:10px;}
+  .empty p{ margin: 4px 0; font-size: 14px; }
+
+  /* Order ticket card */
+  .ticket{
+    background: var(--surface);
+    border: 1px dashed var(--kraft);
+    border-radius: var(--radius-card);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    position: relative;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  .ticket:active{ transform: scale(0.995); }
+  .ticket-hint{ font-size:11px; color: var(--text-soft2); text-align:center; margin: -6px 0 14px; }
+  .filter-row{ display:flex; gap:8px; margin-bottom:14px; }
+  .filter-chip{
+    flex:1;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--text-soft2);
+    padding: 9px 8px;
+    border-radius: 100px;
+    font-size: 12.5px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:'Karla',sans-serif;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .filter-chip .dot{ width:7px; height:7px; border-radius:50%; }
+  .filter-chip.active{ border-color: var(--berry); color: var(--berry-dark); background:#FBEEF1; }
+
+  /* Detail view */
+  .detail-toggle{ display:flex; border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:18px; }
+  .detail-toggle button{
+    flex:1; padding:11px; border:none; background:#fff; color: var(--text-soft2);
+    font-family:'Karla',sans-serif; font-weight:700; font-size:13.5px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .detail-toggle button.active.open{ background: var(--butter-bg); color:#8a6410; }
+  .detail-toggle button.active.delivered{ background: var(--mint-bg); color:#2F5C3E; }
+  .detail-block{
+    background: var(--surface);
+    border:1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .detail-block-head{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .detail-block-head .dicon{ font-size:15px; }
+  .detail-block-head b{ font-family:'Fraunces',serif; font-size:15px; font-weight:600; }
+  .detail-block-sub{ font-size:11.5px; color:var(--text-soft2); margin: -8px 0 12px; }
+  .drow{ display:flex; justify-content:space-between; gap:10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size:13.5px; }
+  .drow:last-child{ border-bottom:none; }
+  .drow .k{ color: var(--text-soft2); flex-shrink:0; }
+  .drow .v{ text-align:right; font-weight:600; }
+  .fin-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:4px; }
+  .fin-row .fk{ font-size:11.5px; color:var(--text-soft2); }
+  .fin-row .fv{ font-family:'Fraunces',serif; font-weight:700; font-size:17px; }
+  .fin-op{ color: var(--text-soft2); font-size:15px; }
+  .fin-final .fv{ color: var(--berry); }
+  .notes-label{ font-size:11.5px; font-weight:700; color: var(--text-soft2); margin-bottom:3px; display:flex; align-items:center; gap:5px;}
+  .notes-text{ font-size:13.5px; margin-bottom:12px; white-space:pre-wrap; }
+  .photo-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:10px; }
+  .photo-thumb{ position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden; border:1px solid var(--line); }
+  .photo-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .photo-thumb .rm{ position:absolute; top:3px; right:3px; background:rgba(0,0,0,0.55); color:#fff; border:none; width:20px; height:20px; border-radius:50%; font-size:12px; cursor:pointer; line-height:1; }
+  .add-photo-btn{
+    border: 1px dashed var(--kraft);
+    background:none;
+    color: var(--kraft-dark);
+    padding: 11px;
+    border-radius: 10px;
+    width:100%;
+    font-family:'Karla',sans-serif;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .ticket-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .ticket-top .name{ font-family:'Fraunces',serif; font-weight:600; font-size:16.5px; }
+  .ticket-top .prod{ font-size: 13.5px; color: var(--text-soft2); margin-top:2px; }
+  .stamp{
+    font-size: 10.5px;
+    font-weight:700;
+    padding: 4px 9px;
+    border-radius: 6px;
+    transform: rotate(-3deg);
+    white-space:nowrap;
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+  .stamp.pendiente{ background: var(--butter-bg); color:#8a6410; border:1px solid var(--butter);}
+  .stamp.en_proceso{ background:#E4E9F5; color:#3C4E9C; border:1px solid #8C9FDA;}
+  .stamp.listo{ background: var(--mint-bg); color:#2F5C3E; border:1px solid var(--mint);}
+  .stamp.entregado{ background:#EFEAE3; color:#6b5c47; border:1px solid #C9BBA4;}
+  .ticket-meta{ display:flex; flex-wrap:wrap; gap: 10px 16px; margin-top: 10px; font-size: 13px; color: var(--text-soft2); }
+  .ticket-meta b{ color: var(--text); font-weight:600;}
+  .ticket-actions{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;}
+  .btn-mini{
+    border:1px solid var(--line);
+    background:#fff;
+    color: var(--text);
+    padding: 7px 11px;
+    border-radius: 9px;
+    font-size:12.5px;
+    font-family:'Karla',sans-serif;
+    font-weight:600;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+  }
+  .btn-mini.whatsapp{ border-color:#3FA755; color:#2E7D3F; background:#EEFBF0;}
+  .btn-mini.edit{ border-color: var(--kraft); color: var(--kraft-dark); }
+  .btn-mini.danger{ border-color: var(--danger); color: var(--danger); }
+  .btn-mini:active{ transform: scale(0.96); }
+
+  select.status-select{
+    font-family:'Karla',sans-serif;
+    font-size:12.5px;
+    font-weight:600;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    padding: 7px 8px;
+    background:#fff;
+    color: var(--text);
+  }
+
+  /* Client row */
+  .client-row{
+    background: var(--surface);
+    border:1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 12px 14px;
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap: 10px;
+    box-shadow: var(--shadow);
+  }
+  .client-row .info b{ font-family:'Fraunces',serif; font-size:15.5px; font-weight:600;}
+  .client-row .info div.phone{ font-size:12.5px; color: var(--text-soft2); margin-top:2px;}
+  .client-row .actions{ display:flex; gap:6px; flex-shrink:0;}
+
+  /* Calendar */
+  .cal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .cal-nav-btn{ background:none; border:1px solid var(--line); border-radius:8px; width:32px; height:32px; font-size:16px; cursor:pointer; color: var(--kraft-dark); }
+  .cal-title{ font-family:'Fraunces',serif; font-weight:600; font-size:17px; text-transform: capitalize;}
+  .cal-grid{ display:grid; grid-template-columns: repeat(7,1fr); gap:5px; }
+  .cal-dow{ text-align:center; font-size:10.5px; color: var(--text-soft2); font-weight:700; padding-bottom:4px;}
+  .cal-day{
+    aspect-ratio: 1;
+    border-radius: 10px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    font-size: 13px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    cursor:pointer;
+    position:relative;
+    color: var(--text);
+  }
+  .cal-day.empty-day{ background:transparent; border:none; cursor:default; }
+  .cal-day.today{ border: 2px solid var(--kraft); font-weight:700; }
+  .cal-day.selected{ background: var(--berry); color:#fff; border-color: var(--berry); }
+  .cal-day .dot{ width:5px; height:5px; border-radius:50%; background: var(--berry); margin-top:3px; }
+  .cal-day.selected .dot{ background:#fff; }
+  .cal-day-list{ margin-top: 18px; }
+  .cal-day-list h3{ font-size: 14.5px; margin-bottom: 10px; color: var(--text-soft2); font-weight:700; font-family:'Karla',sans-serif;}
+
+  /* Inventory */
+  .ing-row{
+    background: var(--surface);
+    border:1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 12px 14px;
+    margin-bottom:10px;
+    box-shadow: var(--shadow);
+  }
+  .ing-top{ display:flex; justify-content:space-between; align-items:center; }
+  .ing-top b{ font-family:'Fraunces',serif; font-size:15.5px; font-weight:600;}
+  .ing-low{ color: var(--danger); font-size:11.5px; font-weight:700; background: var(--danger-bg); padding:3px 8px; border-radius:100px; }
+  .ing-stock-row{ display:flex; align-items:center; gap:10px; margin-top:9px; }
+  .stock-bar-track{ flex:1; height:7px; background:#EDE3D0; border-radius:100px; overflow:hidden;}
+  .stock-bar-fill{ height:100%; background: var(--mint); border-radius:100px; }
+  .stock-bar-fill.low{ background: var(--danger); }
+  .stock-num{ font-size:12.5px; color: var(--text-soft2); white-space:nowrap; min-width:70px; text-align:right;}
+  .qty-btns{ display:flex; gap:6px; margin-top:9px; }
+  .qty-btn{ width:30px; height:30px; border-radius:8px; border:1px solid var(--line); background:#fff; font-size:15px; cursor:pointer; color:var(--kraft-dark); font-weight:700;}
+
+  /* Pricing */
+  .price-card{
+    background: var(--surface);
+    border:1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 14px 16px;
+    margin-bottom:12px;
+    box-shadow: var(--shadow);
+  }
+  .price-card .p-name{ font-family:'Fraunces',serif; font-size:16.5px; font-weight:600; }
+  .price-card .p-breakdown{ font-size:12.5px; color: var(--text-soft2); margin-top:4px; }
+  .price-card .p-final{ margin-top: 10px; display:flex; align-items:baseline; gap:6px; }
+  .price-card .p-final .amount{ font-family:'Fraunces',serif; font-size: 22px; font-weight:700; color: var(--butter); }
+  .price-card .p-final .label{ font-size:11.5px; color: var(--text-soft2); }
+
+  /* Bottom nav */
+  .bottomnav{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    max-width:720px;
+    margin:0 auto;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    display:flex;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    z-index: 20;
+  }
+  .navbtn{
+    flex:1;
+    background:none;
+    border:none;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+    padding: 8px 2px 6px;
+    cursor:pointer;
+    color: var(--text-soft2);
+    font-family:'Karla',sans-serif;
+    border-radius: 10px;
+  }
+  .navbtn .ic{ font-size: 19px; line-height:1; }
+  .navbtn .lb{ font-size: 10px; font-weight:700; }
+  .navbtn.active{ color: var(--berry); background: #FBEEF1; }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background: rgba(58,42,29,0.42);
+    display:none; align-items:flex-end; justify-content:center; z-index:50;
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background: var(--bg);
+    width:100%;
+    max-width: 720px;
+    max-height: 88vh;
+    overflow-y:auto;
+    border-radius: 22px 22px 0 0;
+    padding: 20px 20px calc(24px + env(safe-area-inset-bottom));
+    animation: slideUp .22s ease;
+  }
+  @keyframes slideUp{ from{ transform: translateY(24px); opacity:0;} to{ transform:none; opacity:1;} }
+  .modal h2{ font-size:19px; margin-bottom: 16px; }
+  .field{ margin-bottom: 14px; }
+  .field label{ display:block; font-size:12.5px; font-weight:700; color: var(--text-soft2); margin-bottom:5px; }
+  .field input, .field select, .field textarea{
+    width:100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    font-family:'Karla',sans-serif;
+    font-size: 14.5px;
+    background:#fff;
+    color: var(--text);
+  }
+  .field textarea{ resize:vertical; min-height:60px; }
+  .field-row{ display:flex; gap:10px; }
+  .field-row .field{ flex:1; }
+  .modal-actions{ display:flex; gap:10px; margin-top:6px; }
+  .btn-primary{
+    flex:1;
+    background: var(--berry);
+    color:#fff;
+    border:none;
+    padding: 13px;
+    border-radius: 12px;
+    font-weight:700;
+    font-size:15px;
+    font-family:'Karla',sans-serif;
+    cursor:pointer;
+  }
+  .topbar-right{ display:flex; align-items:center; gap:8px; }
+  .icon-btn{
+    background:#fff;
+    border:1px solid var(--line);
+    width:36px; height:36px;
+    border-radius:10px;
+    font-size:16px;
+    cursor:pointer;
+    color: var(--kraft-dark);
+    flex-shrink:0;
+  }
+  .icon-btn:active{ transform: scale(0.95); }
+  .drive-dot{ width:8px; height:8px; border-radius:50%; background: var(--mint); flex-shrink:0; }
+  .drive-dot.syncing{ background: var(--butter); animation: pulse 1s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .lock-screen{
+    position:fixed; inset:0; z-index:100;
+    background: var(--bg);
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding: 24px;
+    text-align:center;
+  }
+  .lock-screen .emoji{ font-size:38px; margin-bottom:6px; }
+  .lock-screen h2{ font-size:19px; }
+  .lock-screen p{ color: var(--text-soft2); font-size:13.5px; margin: 6px 0 18px; max-width:280px; }
+  .lock-input{
+    text-align:center;
+    font-size: 24px;
+    letter-spacing: 8px;
+    max-width: 180px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    margin-bottom: 10px;
+    font-family:'Karla',sans-serif;
+    background:#fff;
+    color: var(--text);
+  }
+  .lock-error{ color: var(--danger); font-size:12.5px; min-height:16px; margin-bottom:12px; }
+
+  .btn-secondary{
+    background:#fff;
+    color: var(--text-soft2);
+    border:1px solid var(--line);
+    padding: 13px 18px;
+    border-radius:12px;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+  }
+  .helper{ font-size:11.5px; color: var(--text-soft2); margin-top:-8px; margin-bottom:14px; }
+  .loading{ text-align:center; padding: 80px 20px; color: var(--text-soft2); font-family:'Fraunces',serif; font-size:16px;}
+  .toast{
+    position:fixed; bottom: 96px; left:50%; transform:translateX(-50%);
+    background: var(--text); color:#fff; padding:10px 18px; border-radius:100px;
+    font-size:13.5px; z-index:60; box-shadow:0 4px 14px rgba(0,0,0,0.25);
+    opacity:0; pointer-events:none; transition: opacity .2s ease;
+  }
+  .toast.show{ opacity:1; }
+
+  /* Filtro Abiertos / Entregados */
+  .filter-tabs{ display:flex; gap:8px; margin-bottom:14px; }
+  .filter-tab{
+    flex:1;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 9px 10px;
+    font-family:'Karla',sans-serif;
+    font-weight:700;
+    font-size: 13px;
+    cursor:pointer;
+    color: var(--text-soft2);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+  }
+  .filter-tab .dot{ width:8px; height:8px; border-radius:50%; }
+  .filter-tab.active{ border-color: var(--berry); color: var(--berry-dark); background: #FBEEF1; }
+  .ticket.clickable{ cursor:pointer; }
+
+  /* Vista de detalle del pedido */
+  .toggle-row{ display:flex; border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:18px; }
+  .toggle-row button{
+    flex:1; border:none; background:#fff; padding:11px; font-family:'Karla',sans-serif;
+    font-weight:700; font-size:13.5px; cursor:pointer; color: var(--text-soft2);
+  }
+  .toggle-row button.active-open{ background: var(--butter-bg); color:#8a6410; }
+  .toggle-row button.active-delivered{ background: var(--mint-bg); color:#2F5C3E; }
+  .detail-card{
+    background: var(--surface); border:1px solid var(--line); border-radius: var(--radius-card);
+    padding: 14px 16px; margin-bottom:14px;
+  }
+  .detail-section-title{
+    font-family:'Fraunces',serif; font-weight:600; font-size:15.5px; margin-bottom:12px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .detail-row{ margin-bottom:12px; }
+  .detail-row:last-child{ margin-bottom:0; }
+  .detail-row label{ display:block; font-size:11px; font-weight:700; color: var(--text-soft2); margin-bottom:2px; text-transform:none; }
+  .detail-row .val{ font-size:14.5px; color: var(--text); }
+  .detail-row .val.empty{ color: var(--text-soft2); font-style:italic; }
+  .finance-grid{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .finance-grid .fbox{ text-align:center; flex:1; min-width:80px; }
+  .finance-grid .fbox .flabel{ font-size:10.5px; color: var(--text-soft2); font-weight:700; margin-bottom:3px; }
+  .finance-grid .fbox .fval{ font-family:'Fraunces',serif; font-weight:700; font-size:16px; }
+  .finance-grid .fsep{ font-size:16px; color: var(--text-soft2); }
+
+  @media (min-width: 720px){
+    .bottomnav{ border-radius: 16px 16px 0 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="lock-screen" id="lockScreen">
+  <div class="emoji">🔒</div>
+  <h2>Agenda protegida</h2>
+  <p>Ingresa tu PIN para continuar.</p>
+  <input class="lock-input" id="lockInput" type="password" inputmode="numeric" maxlength="8" placeholder="••••" onkeydown="if(event.key==='Enter') tryUnlock()">
+  <div class="lock-error" id="lockError"></div>
+  <button class="btn-primary" style="max-width:200px;" onclick="tryUnlock()">Desbloquear</button>
+</div>
+
+<div class="lock-screen" id="driveScreen"></div>
+
+<div id="app">
+  <div class="topbar">
+    <div>
+      <h1>🧁 Mi Agenda Pastelera</h1>
+      <div class="sub" id="todayLabel"></div>
+    </div>
+    <div class="topbar-right">
+      <div class="badge" id="pendingBadge">0 pendientes</div>
+      <span id="driveStatusDot" class="drive-dot" style="display:none;" title="Guardando en Drive…"></span>
+      <button class="icon-btn" onclick="openSettingsModal()" title="Ajustes">⚙️</button>
+    </div>
+  </div>
+
+  <div id="loadingScreen" class="loading">Abriendo tu obrador… 🍰</div>
+
+  <!-- PEDIDOS -->
+  <div class="view" id="view-pedidos">
+    <div class="section-head">
+      <h2>Pedidos</h2>
+      <button class="add-btn" onclick="openPedidoModal()">+ Nuevo pedido</button>
+    </div>
+    <div id="pedidosList"></div>
+  </div>
+
+  <!-- CLIENTES -->
+  <div class="view" id="view-clientes">
+    <div class="section-head">
+      <h2>Clientes</h2>
+      <button class="add-btn" onclick="openClienteModal()">+ Nuevo cliente</button>
+    </div>
+    <div id="clientesList"></div>
+  </div>
+
+  <!-- CALENDARIO -->
+  <div class="view" id="view-calendario">
+    <div class="section-head"><h2>Calendario de entregas</h2></div>
+    <div class="cal-header">
+      <button class="cal-nav-btn" onclick="calShiftMonth(-1)">‹</button>
+      <div class="cal-title" id="calTitle"></div>
+      <button class="cal-nav-btn" onclick="calShiftMonth(1)">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-day-list" id="calDayList"></div>
+  </div>
+
+  <!-- PRECIOS -->
+  <div class="view" id="view-precios">
+    <div class="section-head">
+      <h2>Costos y precios</h2>
+      <button class="add-btn" onclick="openProductoModal()">+ Calcular precio</button>
+    </div>
+    <div id="preciosList"></div>
+  </div>
+
+  <!-- INVENTARIO -->
+  <div class="view" id="view-inventario">
+    <div class="section-head">
+      <h2>Inventario</h2>
+      <button class="add-btn" onclick="openIngredienteModal()">+ Ingrediente</button>
+    </div>
+    <div id="inventarioList"></div>
+  </div>
+</div>
+
+<div class="bottomnav">
+  <button class="navbtn" data-tab="pedidos" onclick="switchTab('pedidos')"><span class="ic">🧾</span><span class="lb">Pedidos</span></button>
+  <button class="navbtn" data-tab="clientes" onclick="switchTab('clientes')"><span class="ic">👤</span><span class="lb">Clientes</span></button>
+  <button class="navbtn" data-tab="calendario" onclick="switchTab('calendario')"><span class="ic">📅</span><span class="lb">Calendario</span></button>
+  <button class="navbtn" data-tab="precios" onclick="switchTab('precios')"><span class="ic">💲</span><span class="lb">Precios</span></button>
+  <button class="navbtn" data-tab="inventario" onclick="switchTab('inventario')"><span class="ic">🧺</span><span class="lb">Inventario</span></button>
+</div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this) closeModal()">
+  <div class="modal" id="modalBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- Configuración de Google Drive ---------------- */
+/* 1) Pega aquí tu Client ID de Google Cloud (tipo "Aplicación web"). */
+const GOOGLE_CLIENT_ID = 'PON_AQUI_TU_CLIENT_ID.apps.googleusercontent.com';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const DRIVE_FILENAME = 'agenda_pastelera_data.json';
+
+/* ---------------- Estado y almacenamiento ---------------- */
+let DATA = { clientes: [], pedidos: [], productos: [], inventario: [] };
+let CONFIG = { miWhatsapp: '', nombreNegocio: '', infoNegocio: '', pin: '', pinEnabled: false };
+let currentTab = 'pedidos';
+let calDate = new Date();
+let calSelected = null;
+
+let STORAGE_MODE = null; // 'claude' | 'drive'
+let driveTokenClient = null;
+let driveToken = null;
+let driveFileId = null;
+let driveState = { clientes:[], pedidos:[], productos:[], inventario:[], config:{} };
+let driveSaveTimer = null;
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+async function loadObj(key, fallback){
+  if(STORAGE_MODE === 'drive'){
+    return (key in driveState) ? driveState[key] : fallback;
+  }
+  try{
+    const r = await window.storage.get(key, false);
+    return r && r.value ? JSON.parse(r.value) : fallback;
+  }catch(e){ return fallback; }
+}
+async function saveObj(key, obj){
+  if(STORAGE_MODE === 'drive'){
+    driveState[key] = obj;
+    scheduleDriveSave();
+    return;
+  }
+  try{ await window.storage.set(key, JSON.stringify(obj), false); }
+  catch(e){ showToast('No se pudo guardar. Intenta de nuevo.'); }
+}
+// Alias para compatibilidad con listas
+const loadKey = (key)=> loadObj(key, []);
+const saveKey = (key, arr)=> saveObj(key, arr);
+
+async function loadAll(){
+  const [clientes, pedidos, productos, inventario, config] = await Promise.all([
+    loadKey('clientes'), loadKey('pedidos'), loadKey('productos'), loadKey('inventario'),
+    loadObj('config', { miWhatsapp:'', nombreNegocio:'', infoNegocio:'', pin:'', pinEnabled:false })
+  ]);
+  DATA.clientes = clientes; DATA.pedidos = pedidos; DATA.productos = productos; DATA.inventario = inventario;
+  CONFIG = config;
+}
+
+/* ---------------- Modo Google Drive ---------------- */
+function scheduleDriveSave(){
+  clearTimeout(driveSaveTimer);
+  driveSaveTimer = setTimeout(driveWriteFile, 900);
+  const el = document.getElementById('driveStatusDot');
+  if(el) el.classList.add('syncing');
+}
+async function driveWriteFile(){
+  if(!driveToken || !driveFileId) return;
+  try{
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+      method:'PATCH',
+      headers:{ 'Authorization':'Bearer '+driveToken, 'Content-Type':'application/json' },
+      body: JSON.stringify(driveState)
+    });
+  }catch(e){ showToast('No se pudo guardar en Drive. Revisa tu conexión.'); }
+  const el = document.getElementById('driveStatusDot');
+  if(el) el.classList.remove('syncing');
+}
+
+function initGoogleAuth(){
+  driveTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    callback: async (resp)=>{
+      if(!resp || resp.error){
+        renderDriveConnectScreen('No se pudo conectar con Google. Intenta de nuevo.');
+        return;
+      }
+      driveToken = resp.access_token;
+      try{ localStorage.setItem('agendaDriveConnected','1'); }catch(e){}
+      try{
+        await driveLoadOrCreateFile();
+        finishInit();
+      }catch(e){
+        renderDriveConnectScreen('Hubo un problema leyendo tu Drive. Intenta de nuevo.');
+      }
+    }
+  });
+}
+function connectDrive(interactive){
+  if(!driveTokenClient){ return; }
+  driveTokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+}
+function disconnectDrive(){
+  if(driveToken){
+    try{ google.accounts.oauth2.revoke(driveToken, ()=>{}); }catch(e){}
+  }
+  try{ localStorage.removeItem('agendaDriveConnected'); }catch(e){}
+  driveToken = null; driveFileId = null;
+  closeModal();
+  renderDriveConnectScreen();
+}
+
+async function driveLoadOrCreateFile(){
+  const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%27${DRIVE_FILENAME}%27&fields=files(id,name)`, {
+    headers:{ 'Authorization':'Bearer '+driveToken }
+  });
+  const searchData = await searchRes.json();
+  if(searchData.files && searchData.files.length){
+    driveFileId = searchData.files[0].id;
+    const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+      headers:{ 'Authorization':'Bearer '+driveToken }
+    });
+    const text = await fileRes.text();
+    try{ driveState = text ? JSON.parse(text) : driveState; }catch(e){ /* archivo vacío o dañado, se usa el estado por defecto */ }
+  } else {
+    const metadata = { name: DRIVE_FILENAME, parents:['appDataFolder'] };
+    const boundary = 'agenda_pastelera_boundary';
+    const body =
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+      `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(driveState)}\r\n--${boundary}--`;
+    const createRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+driveToken, 'Content-Type':`multipart/related; boundary=${boundary}` },
+      body
+    });
+    const createData = await createRes.json();
+    driveFileId = createData.id;
+  }
+  DATA.clientes = driveState.clientes || [];
+  DATA.pedidos = driveState.pedidos || [];
+  DATA.productos = driveState.productos || [];
+  DATA.inventario = driveState.inventario || [];
+  CONFIG = Object.assign({ miWhatsapp:'', nombreNegocio:'', infoNegocio:'', pin:'', pinEnabled:false }, driveState.config || {});
+}
+
+function renderDriveConnectScreen(errorMsg){
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  const el = document.getElementById('driveScreen');
+  el.innerHTML = `
+    <div class="emoji">🧁☁️</div>
+    <h2>Conecta tu Google Drive</h2>
+    <p>Tus pedidos, clientes e inventario se guardarán en tu Drive y estarán disponibles en cualquier celular o computador donde inicies sesión con tu cuenta de Google.</p>
+    ${errorMsg ? `<p style="color:var(--danger); font-size:13px; margin:-8px 0 16px;">${errorMsg}</p>` : ''}
+    <button class="btn-primary" style="max-width:260px;" onclick="connectDrive(true)">Conectar con Google</button>
+  `;
+  el.style.display = 'flex';
+}
+function renderDriveConfigError(msg){
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  const el = document.getElementById('driveScreen');
+  el.innerHTML = `
+    <div class="emoji">⚠️</div>
+    <h2>No se pudo conectar</h2>
+    <p>${msg}</p>
+  `;
+  el.style.display = 'flex';
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---------------- Navegación ---------------- */
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+tab).classList.add('active');
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  if(tab==='pedidos') renderPedidos();
+  if(tab==='clientes') renderClientes();
+  if(tab==='calendario') renderCalendar();
+  if(tab==='precios') renderPrecios();
+  if(tab==='inventario') renderInventario();
+}
+
+function closeModal(){
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('modalBody').innerHTML = '';
+}
+function openModalHtml(html){
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('overlay').classList.add('open');
+}
+
+/* ---------------- Utilidades ---------------- */
+function fmtMoney(n){
+  n = Number(n)||0;
+  return '$' + n.toLocaleString('es-CO', {maximumFractionDigits:0});
+}
+function fmtDateHuman(iso){
+  if(!iso) return '—';
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('es-ES', {weekday:'short', day:'numeric', month:'short'});
+}
+function digitsOnly(s){ return (s||'').replace(/\D/g,''); }
+function statusLabel(s){
+  return {pendiente:'Pendiente', en_proceso:'En proceso', listo:'Listo', entregado:'Entregado'}[s] || s;
+}
+
+/* ---------------- PEDIDOS ---------------- */
+let pedidosFiltro = 'abiertos';
+
+function renderPedidos(){
+  const list = document.getElementById('pedidosList');
+  updateBadge();
+  let pedidos = [...DATA.pedidos].sort((a,b)=> (a.fechaEntrega||'').localeCompare(b.fechaEntrega||''));
+  pedidos = pedidos.filter(p => pedidosFiltro === 'abiertos' ? p.estado !== 'entregado' : p.estado === 'entregado');
+
+  const filterHtml = `
+    <div class="filter-row">
+      <button class="filter-chip ${pedidosFiltro==='abiertos'?'active':''}" onclick="setPedidosFiltro('abiertos')"><span class="dot" style="background:var(--berry);"></span>Abiertos</button>
+      <button class="filter-chip ${pedidosFiltro==='entregados'?'active':''}" onclick="setPedidosFiltro('entregados')"><span class="dot" style="background:var(--kraft);"></span>Entregados</button>
+    </div>`;
+
+  if(pedidos.length===0){
+    list.innerHTML = filterHtml + `<div class="empty"><span class="icon">🧁</span><p><b>${pedidosFiltro==='abiertos' ? 'No hay pedidos abiertos.' : 'Aún no hay pedidos entregados.'}</b></p><p>${pedidosFiltro==='abiertos' ? 'Toca "Nuevo pedido" para anotar el primero.' : ''}</p></div>`;
+    return;
+  }
+  list.innerHTML = filterHtml + `<div class="ticket-hint">Toca un pedido para ver los detalles</div>` + pedidos.map(p => `
+    <div class="ticket" onclick="openPedidoDetail('${p.id}')">
+      <div class="ticket-top">
+        <div>
+          <div class="name">${escapeHtml(p.clienteNombre)}</div>
+          <div class="prod">${escapeHtml(p.producto)} · x${p.cantidad}</div>
+        </div>
+        <div class="stamp ${p.estado}">${statusLabel(p.estado)}</div>
+      </div>
+      <div class="ticket-meta">
+        <div>📅 <b>${fmtDateHuman(p.fechaEntrega)}</b>${p.hora?(' · '+p.hora):''}</div>
+        <div>💲 <b>${fmtMoney(p.precio)}</b></div>
+        ${(p.saldo>0) ? `<div style="color:var(--danger);">⚠️ Debe: <b>${fmtMoney(p.saldo)}</b></div>` : (p.precio>0 ? `<div style="color:var(--mint);">✓ Pagado</div>` : '')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function setPedidosFiltro(f){
+  pedidosFiltro = f;
+  renderPedidos();
+}
+
+function updateBadge(){
+  const pending = DATA.pedidos.filter(p=>p.estado!=='entregado').length;
+  document.getElementById('pendingBadge').textContent = pending + (pending===1?' pendiente':' pendientes');
+}
+
+async function setPedidoEstado(id, estado){
+  const p = DATA.pedidos.find(x=>x.id===id);
+  if(!p) return;
+  p.estado = estado;
+  await saveKey('pedidos', DATA.pedidos);
+  renderPedidos();
+}
+
+/* ---- Vista de detalle del pedido ---- */
+async function openPedidoDetail(id){
+  const p = DATA.pedidos.find(x=>x.id===id);
+  if(!p) return;
+  const isEntregado = p.estado === 'entregado';
+  const fotos = await loadObj('fotos:'+id, []);
+
+  openModalHtml(`
+    <h2>Detalles del pedido</h2>
+
+    <div class="detail-toggle">
+      <button class="${!isEntregado?'active open':''}" onclick="toggleEntregado('${p.id}', false)">📅 Abierto</button>
+      <button class="${isEntregado?'active delivered':''}" onclick="toggleEntregado('${p.id}', true)">✅ Entregado</button>
+    </div>
+
+    <div class="detail-block">
+      <div class="detail-block-head"><span class="dicon">🗓️</span><b>Información de la orden</b></div>
+      <div class="drow"><div class="k">Cliente</div><div class="v">${escapeHtml(p.clienteNombre)}</div></div>
+      <div class="drow"><div class="k">Entrega</div><div class="v">${fmtDateHuman(p.fechaEntrega)}</div></div>
+      <div class="drow"><div class="k">Hora entrega</div><div class="v">${p.hora ? escapeHtml(p.hora)+' hrs' : '—'}</div></div>
+      <div class="drow"><div class="k">Contacto</div><div class="v">${p.telefono ? escapeHtml(p.telefono) : '—'}</div></div>
+      ${!isEntregado ? `<div class="drow"><div class="k">Estado</div><div class="v">
+        <select class="status-select" onchange="setPedidoEstadoDetail('${p.id}', this.value)">
+          ${['pendiente','en_proceso','listo'].map(s=>`<option value="${s}" ${s===p.estado?'selected':''}>${statusLabel(s)}</option>`).join('')}
+        </select>
+      </div></div>` : ''}
+    </div>
+
+    <div class="detail-block">
+      <div class="detail-block-head"><span class="dicon">🧁</span><b>Producto solicitado</b></div>
+      <div class="drow"><div class="k">Nombre / tipo</div><div class="v">${escapeHtml(p.producto)}</div></div>
+      <div class="drow"><div class="k">Cantidad</div><div class="v">${p.cantidad}</div></div>
+      <div class="drow"><div class="k">Precio unitario</div><div class="v">${fmtMoney(p.precioUnitario!=null ? p.precioUnitario : (p.precio/(p.cantidad||1)))}</div></div>
+      ${p.tamano ? `<div class="drow"><div class="k">Tamaño</div><div class="v">${escapeHtml(p.tamano)}</div></div>` : ''}
+      ${p.saborMasa ? `<div class="drow"><div class="k">Sabor de masa</div><div class="v">${escapeHtml(p.saborMasa)}</div></div>` : ''}
+      ${p.saborRelleno ? `<div class="drow"><div class="k">Sabor de relleno</div><div class="v">${escapeHtml(p.saborRelleno)}</div></div>` : ''}
+      ${p.decoracion ? `<div class="drow"><div class="k">Decoración</div><div class="v">${escapeHtml(p.decoracion)}</div></div>` : ''}
+    </div>
+
+    <div class="detail-block">
+      <div class="detail-block-head"><span class="dicon">💲</span><b>Información financiera</b></div>
+      <div class="detail-block-sub">(Total − Anticipo = Por cobrar)</div>
+      <div class="fin-row">
+        <div><div class="fk">Total</div><div class="fv">${fmtMoney(p.precio)}</div></div>
+        <div class="fin-op">−</div>
+        <div><div class="fk">Anticipo</div><div class="fv">${fmtMoney(p.abono||0)}</div></div>
+        <div class="fin-op">=</div>
+        <div class="fin-final"><div class="fk">Por cobrar</div><div class="fv">${fmtMoney(p.saldo!=null?p.saldo:(p.precio-(p.abono||0)))}</div></div>
+      </div>
+    </div>
+
+    <div class="detail-block">
+      <div class="detail-block-head"><span class="dicon">📝</span><b>Notas adicionales</b></div>
+      <div class="notes-label">🔒 Notas internas (privadas)</div>
+      <div class="notes-text">${p.notasPrivadas ? escapeHtml(p.notasPrivadas) : 'Sin notas privadas'}</div>
+      <div class="notes-label">💬 Notas públicas para el cliente</div>
+      <div class="notes-text">${p.notas ? escapeHtml(p.notas) : 'Sin notas públicas'}</div>
+      <div class="notes-label">🏪 Datos permanentes de tu negocio</div>
+      <div class="notes-text">${CONFIG.nombreNegocio || CONFIG.infoNegocio ? `${escapeHtml(CONFIG.nombreNegocio||'')}${CONFIG.infoNegocio ? ' — '+escapeHtml(CONFIG.infoNegocio) : ''}` : 'Configúralos en Ajustes ⚙️'}</div>
+    </div>
+
+    <div class="detail-block">
+      <div class="detail-block-head"><span class="dicon">📷</span><b>Fotos del pedido</b></div>
+      ${fotos.length ? `<div class="photo-grid">${fotos.map((f,idx)=>`
+        <div class="photo-thumb"><img src="${f}"><button class="rm" onclick="removeFoto('${p.id}', ${idx})">✕</button></div>
+      `).join('')}</div>` : `<div class="notes-text" style="text-align:center;color:var(--text-soft2);">Este pedido aún no tiene fotos</div>`}
+      ${fotos.length < 5 ? `
+        <input type="file" accept="image/*" id="fotoInput" style="display:none;" onchange="addFoto('${p.id}', this)">
+        <button class="add-photo-btn" onclick="document.getElementById('fotoInput').click()">📷 Agregar foto (${fotos.length}/5)</button>
+      ` : ''}
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cerrar</button>
+      <button class="btn-primary" onclick="openPedidoModal('${p.id}')">✏️ Editar pedido</button>
+    </div>
+    <button class="btn-mini whatsapp" style="width:100%;justify-content:center;margin-top:10px;padding:11px;" onclick="sendWhatsapp('${p.id}')">📲 Compartir ticket por WhatsApp</button>
+  `);
+}
+
+async function toggleEntregado(id, entregado){
+  const p = DATA.pedidos.find(x=>x.id===id);
+  if(!p) return;
+  p.estado = entregado ? 'entregado' : 'pendiente';
+  await saveKey('pedidos', DATA.pedidos);
+  openPedidoDetail(id);
+  renderPedidos();
+}
+
+async function setPedidoEstadoDetail(id, estado){
+  const p = DATA.pedidos.find(x=>x.id===id);
+  if(!p) return;
+  p.estado = estado;
+  await saveKey('pedidos', DATA.pedidos);
+  renderPedidos();
+}
+
+function addFoto(id, input){
+  const file = input.files[0];
+  if(!file) return;
+  if(file.size > 500*1024){
+    showToast('Esa foto pesa mucho, prueba con una más liviana (máx. 500KB)');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = async ()=>{
+    const fotos = await loadObj('fotos:'+id, []);
+    if(fotos.length >= 5){ showToast('Máximo 5 fotos por pedido'); return; }
+    fotos.push(reader.result);
+    await saveObj('fotos:'+id, fotos);
+    openPedidoDetail(id);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function removeFoto(id, idx){
+  const fotos = await loadObj('fotos:'+id, []);
+  fotos.splice(idx,1);
+  await saveObj('fotos:'+id, fotos);
+  openPedidoDetail(id);
+}
+
+function openPedidoModal(id){
+  const editing = id ? DATA.pedidos.find(p=>p.id===id) : null;
+  const clienteOptions = DATA.clientes.map(c=>`<option value="${c.id}" ${editing&&editing.clienteId===c.id?'selected':''}>${escapeHtml(c.nombre)}</option>`).join('');
+  const productoOptions = DATA.productos.map(pr=>`<option value="${escapeHtml(pr.nombre)}|${pr.precioFinal}">${escapeHtml(pr.nombre)} (${fmtMoney(pr.precioFinal)})</option>`).join('');
+  openModalHtml(`
+    <h2>${editing?'Editar pedido':'Nuevo pedido'}</h2>
+    <div class="field">
+      <label>Cliente</label>
+      <select id="f-cliente" onchange="onClienteSelectChange()">
+        <option value="">Selecciona un cliente…</option>
+        ${clienteOptions}
+        <option value="__nuevo">+ Cliente nuevo (rápido)</option>
+      </select>
+    </div>
+    <div id="f-cliente-nuevo-box" style="display:none;">
+      <div class="field-row">
+        <div class="field"><label>Nombre</label><input id="f-cliente-nombre" placeholder="Nombre del cliente"></div>
+        <div class="field"><label>WhatsApp</label><input id="f-cliente-telefono" placeholder="Ej: 573001234567"></div>
+      </div>
+    </div>
+    ${DATA.productos.length ? `<div class="field">
+      <label>Producto del catálogo (opcional)</label>
+      <select id="f-producto-catalogo" onchange="onProductoCatalogoChange()">
+        <option value="">Escribir manualmente…</option>
+        ${productoOptions}
+      </select>
+    </div>` : ''}
+    <div class="field-row">
+      <div class="field"><label>Producto / descripción</label><input id="f-producto" value="${editing?escapeAttr(editing.producto):''}" placeholder="Ej: Torta de vainilla"></div>
+      <div class="field" style="max-width:90px;"><label>Cantidad</label><input id="f-cantidad" type="number" min="1" value="${editing?editing.cantidad:1}" oninput="updateSaldoPreview()"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Tamaño</label><input id="f-tamano" value="${editing?escapeAttr(editing.tamano||''):''}" placeholder="Ej: Personal, mediana…"></div>
+      <div class="field"><label>Decoración</label><input id="f-decoracion" value="${editing?escapeAttr(editing.decoracion||''):''}" placeholder="Ej: Flores, tema…"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Sabor de masa</label><input id="f-sabor-masa" value="${editing?escapeAttr(editing.saborMasa||''):''}" placeholder="Ej: Vainilla"></div>
+      <div class="field"><label>Sabor de relleno</label><input id="f-sabor-relleno" value="${editing?escapeAttr(editing.saborRelleno||''):''}" placeholder="Ej: Mora"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Fecha de entrega</label><input id="f-fecha" type="date" value="${editing?editing.fechaEntrega:''}"></div>
+      <div class="field"><label>Hora (opcional)</label><input id="f-hora" type="time" value="${editing?(editing.hora||''):''}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Precio unitario</label><input id="f-precio" type="number" min="0" value="${editing?(editing.precioUnitario!=null?editing.precioUnitario:editing.precio):''}" placeholder="0" oninput="updateSaldoPreview()"></div>
+      <div class="field"><label>Abono pagado</label><input id="f-abono" type="number" min="0" value="${editing?(editing.abono||0):0}" placeholder="0" oninput="updateSaldoPreview()"></div>
+    </div>
+    <div class="helper" id="saldoPreview">Total: $0 · Debe: $0</div>
+    <div class="field"><label>Notas privadas (solo para ti)</label><textarea id="f-notas-privadas" placeholder="Ej: pasa a recoger, alergias…">${editing?escapeHtml(editing.notasPrivadas||''):''}</textarea></div>
+    <div class="field"><label>Notas públicas (se envían al cliente)</label><textarea id="f-notas" placeholder="Ej: mensaje en la torta…">${editing?escapeHtml(editing.notas||''):''}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="savePedido(${editing?`'${editing.id}'`:'null'})">Guardar pedido</button>
+    </div>
+  `);
+  if(editing){
+    document.getElementById('f-cliente').value = editing.clienteId || '';
+  }
+  updateSaldoPreview();
+}
+
+function updateSaldoPreview(){
+  const precioUnit = Number(document.getElementById('f-precio').value)||0;
+  const cantidad = Number(document.getElementById('f-cantidad').value)||1;
+  const abono = Number(document.getElementById('f-abono').value)||0;
+  const total = precioUnit * cantidad;
+  const saldo = Math.max(0, total - abono);
+  document.getElementById('saldoPreview').textContent = `Total: ${fmtMoney(total)} · ` + (saldo > 0
+    ? `Debe: ${fmtMoney(saldo)}`
+    : (total > 0 ? 'Pagado por completo ✓' : 'Debe: $0'));
+}
+
+function onClienteSelectChange(){
+  const v = document.getElementById('f-cliente').value;
+  document.getElementById('f-cliente-nuevo-box').style.display = (v==='__nuevo') ? 'block' : 'none';
+}
+function onProductoCatalogoChange(){
+  const v = document.getElementById('f-producto-catalogo').value;
+  if(!v) return;
+  const [nombre, precio] = v.split('|');
+  document.getElementById('f-producto').value = nombre;
+  document.getElementById('f-precio').value = Math.round(Number(precio));
+}
+
+async function savePedido(id){
+  let clienteId = document.getElementById('f-cliente').value;
+  let clienteNombre = '', telefono = '';
+
+  if(clienteId === '__nuevo'){
+    const nombre = document.getElementById('f-cliente-nombre').value.trim();
+    const tel = digitsOnly(document.getElementById('f-cliente-telefono').value);
+    if(!nombre){ showToast('Escribe el nombre del cliente'); return; }
+    const nuevoCliente = { id: uid(), nombre, telefono: tel, notas:'' };
+    DATA.clientes.push(nuevoCliente);
+    await saveKey('clientes', DATA.clientes);
+    clienteId = nuevoCliente.id; clienteNombre = nombre; telefono = tel;
+  } else if(clienteId){
+    const c = DATA.clientes.find(x=>x.id===clienteId);
+    clienteNombre = c ? c.nombre : '';
+    telefono = c ? c.telefono : '';
+  } else {
+    showToast('Selecciona o crea un cliente');
+    return;
+  }
+
+  const producto = document.getElementById('f-producto').value.trim();
+  const cantidad = Number(document.getElementById('f-cantidad').value) || 1;
+  const tamano = document.getElementById('f-tamano').value.trim();
+  const decoracion = document.getElementById('f-decoracion').value.trim();
+  const saborMasa = document.getElementById('f-sabor-masa').value.trim();
+  const saborRelleno = document.getElementById('f-sabor-relleno').value.trim();
+  const fechaEntrega = document.getElementById('f-fecha').value;
+  const hora = document.getElementById('f-hora').value;
+  const precioUnitario = Number(document.getElementById('f-precio').value) || 0;
+  const precio = precioUnitario * cantidad;
+  const abono = Number(document.getElementById('f-abono').value) || 0;
+  const saldo = Math.max(0, precio - abono);
+  const notas = document.getElementById('f-notas').value.trim();
+  const notasPrivadas = document.getElementById('f-notas-privadas').value.trim();
+
+  if(!producto){ showToast('Escribe el producto'); return; }
+  if(!fechaEntrega){ showToast('Elige la fecha de entrega'); return; }
+
+  if(id){
+    const p = DATA.pedidos.find(x=>x.id===id);
+    Object.assign(p, {clienteId, clienteNombre, telefono, producto, cantidad, tamano, decoracion, saborMasa, saborRelleno, fechaEntrega, hora, precioUnitario, precio, abono, saldo, notas, notasPrivadas});
+  } else {
+    DATA.pedidos.push({ id: uid(), clienteId, clienteNombre, telefono, producto, cantidad, tamano, decoracion, saborMasa, saborRelleno, fechaEntrega, hora, precioUnitario, precio, abono, saldo, notas, notasPrivadas, estado:'pendiente', fotos:[] });
+  }
+  await saveKey('pedidos', DATA.pedidos);
+  closeModal();
+  renderPedidos();
+  showToast('Pedido guardado 🎉');
+}
+
+async function deletePedido(id){
+  if(!confirm('¿Eliminar este pedido?')) return;
+  DATA.pedidos = DATA.pedidos.filter(p=>p.id!==id);
+  await saveKey('pedidos', DATA.pedidos);
+  renderPedidos();
+}
+
+function sendWhatsapp(id){
+  const p = DATA.pedidos.find(x=>x.id===id);
+  if(!p) return;
+  const tel = digitsOnly(p.telefono);
+  if(!tel || tel.length < 8){
+    showToast('Este cliente no tiene un WhatsApp válido guardado');
+    return;
+  }
+  const negocioLine = (CONFIG.nombreNegocio || CONFIG.infoNegocio)
+    ? `\n${CONFIG.nombreNegocio||''}${CONFIG.infoNegocio ? ' — '+CONFIG.infoNegocio : ''}` : '';
+  const msg = `¡Hola ${p.clienteNombre}! 🧁 Te confirmo tu pedido:\n` +
+    `• Producto: ${p.producto} (x${p.cantidad})\n` +
+    (p.tamano ? `• Tamaño: ${p.tamano}\n` : '') +
+    (p.saborMasa ? `• Sabor de masa: ${p.saborMasa}\n` : '') +
+    (p.saborRelleno ? `• Sabor de relleno: ${p.saborRelleno}\n` : '') +
+    (p.decoracion ? `• Decoración: ${p.decoracion}\n` : '') +
+    `• Precio total: ${fmtMoney(p.precio)}\n` +
+    (p.abono>0 ? `• Abono pagado: ${fmtMoney(p.abono)}\n` : '') +
+    (p.saldo>0 ? `• Saldo pendiente: ${fmtMoney(p.saldo)}\n` : '') +
+    `• Fecha de entrega: ${fmtDateHuman(p.fechaEntrega)}${p.hora ? ' a las '+p.hora : ''}\n` +
+    (p.notas ? `• Notas: ${p.notas}\n` : '') +
+    `\n¡Gracias por tu compra! 💕` + negocioLine;
+  const url = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+function sendWhatsappCopy(id){
+  const p = DATA.pedidos.find(x=>x.id===id);
+  if(!p) return;
+  const miTel = digitsOnly(CONFIG.miWhatsapp);
+  if(!miTel || miTel.length < 8){
+    showToast('Configura tu WhatsApp en Ajustes ⚙️ primero');
+    openSettingsModal();
+    return;
+  }
+  const msg = `📋 Copia de pedido\n` +
+    `Cliente: ${p.clienteNombre}${p.telefono ? ' ('+p.telefono+')' : ''}\n` +
+    `Producto: ${p.producto} (x${p.cantidad})\n` +
+    `Precio total: ${fmtMoney(p.precio)}\n` +
+    (p.abono>0 ? `Abono pagado: ${fmtMoney(p.abono)}\n` : '') +
+    (p.saldo>0 ? `Saldo pendiente: ${fmtMoney(p.saldo)}\n` : '') +
+    `Entrega: ${fmtDateHuman(p.fechaEntrega)}${p.hora ? ' a las '+p.hora : ''}\n` +
+    (p.notas ? `Notas: ${p.notas}\n` : '') +
+    `Estado: ${statusLabel(p.estado)}`;
+  const url = `https://wa.me/${miTel}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+/* ---------------- AJUSTES Y SEGURIDAD (PIN) ---------------- */
+function openSettingsModal(){
+  openModalHtml(`
+    <h2>Ajustes</h2>
+    <div class="field">
+      <label>Tu WhatsApp (para recibir copia de pedidos)</label>
+      <input id="f-s-mitel" value="${escapeAttr(CONFIG.miWhatsapp)}" placeholder="Ej: 573001234567">
+    </div>
+    <div class="helper">Con esto podrás tocar "Copia a mi WhatsApp" en cualquier pedido para mandártelo a ti misma/o.</div>
+    <div class="field">
+      <label>Nombre de tu negocio (opcional)</label>
+      <input id="f-s-nombre" value="${escapeAttr(CONFIG.nombreNegocio||'')}" placeholder="Ej: Dulce Momento Pastelería">
+    </div>
+    <div class="field">
+      <label>Info adicional del negocio (opcional)</label>
+      <input id="f-s-info" value="${escapeAttr(CONFIG.infoNegocio||'')}" placeholder="Ej: Dirección, horario, redes…">
+    </div>
+    <div class="helper">Estos datos aparecen en la ficha de cada pedido y se agregan al final del mensaje que le envías al cliente por WhatsApp.</div>
+    <div class="field">
+      <label>PIN de acceso (opcional)</label>
+      <input id="f-s-pin" type="password" inputmode="numeric" maxlength="8" value="${escapeAttr(CONFIG.pin)}" placeholder="Ej: 1234">
+    </div>
+    <div class="helper">Si defines un PIN, se pedirá cada vez que se abra esta agenda en un navegador o celular. Es una protección básica contra miradas curiosas en tu propio dispositivo — no es un sistema de seguridad contra ataques informáticos, así que también cuida el acceso a tu celular y a tu cuenta.</div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveSettings()">Guardar</button>
+    </div>
+    ${CONFIG.pinEnabled ? `<button class="btn-mini danger" style="margin-top:14px;width:100%;justify-content:center;" onclick="closeModal(); lockNow();">🔒 Bloquear ahora</button>` : ''}
+    ${STORAGE_MODE==='drive' ? `<button class="btn-mini" style="margin-top:10px;width:100%;justify-content:center;" onclick="disconnectDrive()">☁️ Cambiar de cuenta de Google Drive</button>` : ''}
+  `);
+}
+
+async function saveSettings(){
+  const miWhatsapp = digitsOnly(document.getElementById('f-s-mitel').value);
+  const nombreNegocio = document.getElementById('f-s-nombre').value.trim();
+  const infoNegocio = document.getElementById('f-s-info').value.trim();
+  const pin = document.getElementById('f-s-pin').value.trim();
+  CONFIG = { miWhatsapp, nombreNegocio, infoNegocio, pin, pinEnabled: pin.length > 0 };
+  await saveObj('config', CONFIG);
+  closeModal();
+  showToast('Ajustes guardados');
+}
+
+function lockNow(){
+  if(!CONFIG.pinEnabled || !CONFIG.pin){ showToast('Configura un PIN en Ajustes primero'); return; }
+  document.getElementById('app').style.display = 'none';
+  const lock = document.getElementById('lockScreen');
+  lock.style.display = 'flex';
+  document.getElementById('lockInput').value = '';
+  document.getElementById('lockError').textContent = '';
+  setTimeout(()=>document.getElementById('lockInput').focus(), 50);
+}
+
+function tryUnlock(){
+  const val = document.getElementById('lockInput').value;
+  if(val === CONFIG.pin){
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('app').style.display = '';
+  } else {
+    document.getElementById('lockError').textContent = 'PIN incorrecto, intenta de nuevo';
+    document.getElementById('lockInput').value = '';
+    document.getElementById('lockInput').focus();
+  }
+}
+
+/* ---------------- CLIENTES ---------------- */
+function renderClientes(){
+  const list = document.getElementById('clientesList');
+  if(DATA.clientes.length===0){
+    list.innerHTML = `<div class="empty"><span class="icon">👤</span><p><b>Sin clientes aún.</b></p><p>Agrégalos aquí o al crear un pedido.</p></div>`;
+    return;
+  }
+  list.innerHTML = DATA.clientes.map(c => `
+    <div class="client-row">
+      <div class="info">
+        <b>${escapeHtml(c.nombre)}</b>
+        <div class="phone">${c.telefono ? '📱 '+escapeHtml(c.telefono) : 'Sin WhatsApp guardado'}</div>
+      </div>
+      <div class="actions">
+        <button class="btn-mini edit" onclick="openClienteModal('${c.id}')">✏️</button>
+        <button class="btn-mini danger" onclick="deleteCliente('${c.id}')">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openClienteModal(id){
+  const editing = id ? DATA.clientes.find(c=>c.id===id) : null;
+  openModalHtml(`
+    <h2>${editing?'Editar cliente':'Nuevo cliente'}</h2>
+    <div class="field"><label>Nombre</label><input id="f-c-nombre" value="${editing?escapeAttr(editing.nombre):''}" placeholder="Nombre completo"></div>
+    <div class="field"><label>WhatsApp (con código de país, solo números)</label><input id="f-c-telefono" value="${editing?escapeAttr(editing.telefono):''}" placeholder="Ej: 573001234567"></div>
+    <div class="helper">Así puedes enviarle los pedidos directo por WhatsApp.</div>
+    <div class="field"><label>Notas (opcional)</label><textarea id="f-c-notas" placeholder="Preferencias, alergias…">${editing?escapeHtml(editing.notas||''):''}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveCliente(${editing?`'${editing.id}'`:'null'})">Guardar cliente</button>
+    </div>
+  `);
+}
+
+async function saveCliente(id){
+  const nombre = document.getElementById('f-c-nombre').value.trim();
+  const telefono = digitsOnly(document.getElementById('f-c-telefono').value);
+  const notas = document.getElementById('f-c-notas').value.trim();
+  if(!nombre){ showToast('Escribe el nombre'); return; }
+  if(id){
+    const c = DATA.clientes.find(x=>x.id===id);
+    Object.assign(c, {nombre, telefono, notas});
+    DATA.pedidos.forEach(p=>{ if(p.clienteId===id){ p.clienteNombre = nombre; p.telefono = telefono; } });
+    await saveKey('pedidos', DATA.pedidos);
+  } else {
+    DATA.clientes.push({ id: uid(), nombre, telefono, notas });
+  }
+  await saveKey('clientes', DATA.clientes);
+  closeModal();
+  renderClientes();
+  showToast('Cliente guardado');
+}
+
+async function deleteCliente(id){
+  if(!confirm('¿Eliminar este cliente? (sus pedidos no se borrarán)')) return;
+  DATA.clientes = DATA.clientes.filter(c=>c.id!==id);
+  await saveKey('clientes', DATA.clientes);
+  renderClientes();
+}
+
+/* ---------------- CALENDARIO ---------------- */
+function renderCalendar(){
+  const year = calDate.getFullYear(), month = calDate.getMonth();
+  document.getElementById('calTitle').textContent = calDate.toLocaleDateString('es-ES', {month:'long', year:'numeric'});
+  const grid = document.getElementById('calGrid');
+  const dows = ['L','M','X','J','V','S','D'];
+  let html = dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+
+  const firstDay = new Date(year, month, 1);
+  let startOffset = (firstDay.getDay() + 6) % 7; // Monday=0
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const todayIso = new Date().toISOString().slice(0,10);
+
+  const countsByDay = {};
+  DATA.pedidos.forEach(p=>{
+    if(p.fechaEntrega){ countsByDay[p.fechaEntrega] = (countsByDay[p.fechaEntrega]||0)+1; }
+  });
+
+  for(let i=0;i<startOffset;i++) html += `<div class="cal-day empty-day"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = iso === todayIso;
+    const isSelected = iso === calSelected;
+    const hasOrders = !!countsByDay[iso];
+    html += `<div class="cal-day ${isToday?'today':''} ${isSelected?'selected':''}" onclick="calSelectDay('${iso}')">
+      ${d}${hasOrders?'<span class="dot"></span>':''}
+    </div>`;
+  }
+  grid.innerHTML = html;
+  renderCalDayList();
+}
+
+function calShiftMonth(delta){
+  calDate = new Date(calDate.getFullYear(), calDate.getMonth()+delta, 1);
+  renderCalendar();
+}
+function calSelectDay(iso){
+  calSelected = (calSelected===iso) ? null : iso;
+  renderCalendar();
+}
+function renderCalDayList(){
+  const box = document.getElementById('calDayList');
+  if(!calSelected){ box.innerHTML=''; return; }
+  const pedidosDia = DATA.pedidos.filter(p=>p.fechaEntrega===calSelected);
+  if(pedidosDia.length===0){
+    box.innerHTML = `<h3>${fmtDateHuman(calSelected)}</h3><div class="empty" style="padding:20px;"><p>No hay entregas este día.</p></div>`;
+    return;
+  }
+  box.innerHTML = `<h3>Entregas — ${fmtDateHuman(calSelected)}</h3>` + pedidosDia.map(p=>`
+    <div class="ticket">
+      <div class="ticket-top">
+        <div>
+          <div class="name">${escapeHtml(p.clienteNombre)}</div>
+          <div class="prod">${escapeHtml(p.producto)} · x${p.cantidad}</div>
+        </div>
+        <div class="stamp ${p.estado}">${statusLabel(p.estado)}</div>
+      </div>
+      <div class="ticket-actions">
+        <button class="btn-mini whatsapp" onclick="sendWhatsapp('${p.id}')">📲 WhatsApp</button>
+        <button class="btn-mini" onclick="sendWhatsappCopy('${p.id}')">📤 Copia a mí</button>
+        <button class="btn-mini edit" onclick="openPedidoModal('${p.id}')">✏️ Editar</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ---------------- PRECIOS / COSTOS ---------------- */
+function renderPrecios(){
+  const list = document.getElementById('preciosList');
+  if(DATA.productos.length===0){
+    list.innerHTML = `<div class="empty"><span class="icon">💲</span><p><b>Aún no calculas precios aquí.</b></p><p>Toca "Calcular precio" para tu primer producto.</p></div>`;
+    return;
+  }
+  list.innerHTML = DATA.productos.map(p => `
+    <div class="price-card">
+      <div class="p-name">${escapeHtml(p.nombre)}</div>
+      <div class="p-breakdown">Ingredientes ${fmtMoney(p.costoIngredientes)} + mano de obra ${fmtMoney(p.costoManoObra)} · margen ${p.margen}%</div>
+      <div class="p-final"><span class="amount">${fmtMoney(p.precioFinal)}</span><span class="label">precio de venta sugerido</span></div>
+      <div class="ticket-actions">
+        <button class="btn-mini edit" onclick="openProductoModal('${p.id}')">✏️ Editar</button>
+        <button class="btn-mini danger" onclick="deleteProducto('${p.id}')">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openProductoModal(id){
+  const editing = id ? DATA.productos.find(p=>p.id===id) : null;
+  openModalHtml(`
+    <h2>${editing?'Editar precio':'Calcular precio'}</h2>
+    <div class="field"><label>Nombre del producto</label><input id="f-p-nombre" value="${editing?escapeAttr(editing.nombre):''}" placeholder="Ej: Cupcakes de chocolate (docena)"></div>
+    <div class="field-row">
+      <div class="field"><label>Costo ingredientes</label><input id="f-p-ing" type="number" min="0" value="${editing?editing.costoIngredientes:''}" placeholder="0" oninput="previewPrecio()"></div>
+      <div class="field"><label>Mano de obra / otros</label><input id="f-p-mano" type="number" min="0" value="${editing?editing.costoManoObra:''}" placeholder="0" oninput="previewPrecio()"></div>
+    </div>
+    <div class="field"><label>Margen de ganancia deseado (%)</label><input id="f-p-margen" type="number" min="0" max="95" value="${editing?editing.margen:40}" oninput="previewPrecio()"></div>
+    <div class="helper" id="precioPreview">Precio sugerido: —</div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveProducto(${editing?`'${editing.id}'`:'null'})">Guardar</button>
+    </div>
+  `);
+  previewPrecio();
+}
+
+function calcPrecio(costoIng, costoMano, margen){
+  const base = costoIng + costoMano;
+  const m = Math.min(Math.max(margen,0),95);
+  return base / (1 - (m/100));
+}
+function previewPrecio(){
+  const ing = Number(document.getElementById('f-p-ing').value)||0;
+  const mano = Number(document.getElementById('f-p-mano').value)||0;
+  const margen = Number(document.getElementById('f-p-margen').value)||0;
+  const precio = calcPrecio(ing, mano, margen);
+  document.getElementById('precioPreview').textContent = 'Precio sugerido: ' + fmtMoney(precio);
+}
+
+async function saveProducto(id){
+  const nombre = document.getElementById('f-p-nombre').value.trim();
+  const costoIngredientes = Number(document.getElementById('f-p-ing').value)||0;
+  const costoManoObra = Number(document.getElementById('f-p-mano').value)||0;
+  const margen = Number(document.getElementById('f-p-margen').value)||0;
+  if(!nombre){ showToast('Escribe el nombre del producto'); return; }
+  const precioFinal = Math.round(calcPrecio(costoIngredientes, costoManoObra, margen));
+  if(id){
+    const p = DATA.productos.find(x=>x.id===id);
+    Object.assign(p, {nombre, costoIngredientes, costoManoObra, margen, precioFinal});
+  } else {
+    DATA.productos.push({ id: uid(), nombre, costoIngredientes, costoManoObra, margen, precioFinal });
+  }
+  await saveKey('productos', DATA.productos);
+  closeModal();
+  renderPrecios();
+  showToast('Precio guardado');
+}
+
+async function deleteProducto(id){
+  if(!confirm('¿Eliminar este producto de tu lista de precios?')) return;
+  DATA.productos = DATA.productos.filter(p=>p.id!==id);
+  await saveKey('productos', DATA.productos);
+  renderPrecios();
+}
+
+/* ---------------- INVENTARIO ---------------- */
+function renderInventario(){
+  const list = document.getElementById('inventarioList');
+  if(DATA.inventario.length===0){
+    list.innerHTML = `<div class="empty"><span class="icon">🧺</span><p><b>Sin ingredientes registrados.</b></p><p>Agrega los que usas para controlar tu stock.</p></div>`;
+    return;
+  }
+  list.innerHTML = DATA.inventario.map(i => {
+    const low = i.stock <= i.stockMinimo;
+    const pct = i.stockMinimo>0 ? Math.min(100, Math.round((i.stock / (i.stockMinimo*2 || 1))*100)) : 100;
+    return `
+    <div class="ing-row">
+      <div class="ing-top">
+        <b>${escapeHtml(i.nombre)}</b>
+        ${low ? `<span class="ing-low">Stock bajo</span>` : ''}
+      </div>
+      <div class="ing-stock-row">
+        <div class="stock-bar-track"><div class="stock-bar-fill ${low?'low':''}" style="width:${pct}%;"></div></div>
+        <div class="stock-num">${i.stock} ${escapeHtml(i.unidad)}</div>
+      </div>
+      <div class="qty-btns">
+        <button class="qty-btn" onclick="adjustStock('${i.id}', -1)">−</button>
+        <button class="qty-btn" onclick="adjustStock('${i.id}', 1)">+</button>
+        <button class="btn-mini edit" onclick="openIngredienteModal('${i.id}')">✏️ Editar</button>
+        <button class="btn-mini danger" onclick="deleteIngrediente('${i.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openIngredienteModal(id){
+  const editing = id ? DATA.inventario.find(i=>i.id===id) : null;
+  openModalHtml(`
+    <h2>${editing?'Editar ingrediente':'Nuevo ingrediente'}</h2>
+    <div class="field"><label>Nombre</label><input id="f-i-nombre" value="${editing?escapeAttr(editing.nombre):''}" placeholder="Ej: Harina de trigo"></div>
+    <div class="field-row">
+      <div class="field"><label>Stock actual</label><input id="f-i-stock" type="number" min="0" value="${editing?editing.stock:''}" placeholder="0"></div>
+      <div class="field"><label>Unidad</label><input id="f-i-unidad" value="${editing?escapeAttr(editing.unidad):''}" placeholder="kg, g, unidades…"></div>
+    </div>
+    <div class="field"><label>Stock mínimo (para avisarte)</label><input id="f-i-min" type="number" min="0" value="${editing?editing.stockMinimo:''}" placeholder="0"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveIngrediente(${editing?`'${editing.id}'`:'null'})">Guardar</button>
+    </div>
+  `);
+}
+
+async function saveIngrediente(id){
+  const nombre = document.getElementById('f-i-nombre').value.trim();
+  const stock = Number(document.getElementById('f-i-stock').value)||0;
+  const unidad = document.getElementById('f-i-unidad').value.trim() || 'unid.';
+  const stockMinimo = Number(document.getElementById('f-i-min').value)||0;
+  if(!nombre){ showToast('Escribe el nombre del ingrediente'); return; }
+  if(id){
+    const i = DATA.inventario.find(x=>x.id===id);
+    Object.assign(i, {nombre, stock, unidad, stockMinimo});
+  } else {
+    DATA.inventario.push({ id: uid(), nombre, stock, unidad, stockMinimo });
+  }
+  await saveKey('inventario', DATA.inventario);
+  closeModal();
+  renderInventario();
+  showToast('Ingrediente guardado');
+}
+
+async function adjustStock(id, delta){
+  const i = DATA.inventario.find(x=>x.id===id);
+  if(!i) return;
+  i.stock = Math.max(0, i.stock + delta);
+  await saveKey('inventario', DATA.inventario);
+  renderInventario();
+}
+
+async function deleteIngrediente(id){
+  if(!confirm('¿Eliminar este ingrediente?')) return;
+  DATA.inventario = DATA.inventario.filter(i=>i.id!==id);
+  await saveKey('inventario', DATA.inventario);
+  renderInventario();
+}
+
+/* ---------------- Helpers de escape ---------------- */
+function escapeHtml(s){
+  return String(s??'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escapeAttr(s){ return escapeHtml(s); }
+
+/* ---------------- Init ---------------- */
+async function init(){
+  document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'});
+
+  if(window.storage){
+    STORAGE_MODE = 'claude';
+    await loadAll();
+    document.getElementById('loadingScreen').style.display = 'none';
+    finishInit();
+    return;
+  }
+
+  STORAGE_MODE = 'drive';
+  if(GOOGLE_CLIENT_ID.indexOf('PON_AQUI') !== -1){
+    renderDriveConfigError('Falta configurar el Client ID de Google en el código de esta app. Sigue los pasos de configuración que te dieron junto con este archivo.');
+    return;
+  }
+  if(typeof google === 'undefined' || !google.accounts){
+    renderDriveConfigError('No se pudo cargar el inicio de sesión de Google. Revisa tu conexión a internet y recarga la página.');
+    return;
+  }
+  initGoogleAuth();
+  renderDriveConnectScreen();
+  let wasConnected = false;
+  try{ wasConnected = localStorage.getItem('agendaDriveConnected') === '1'; }catch(e){}
+  if(wasConnected){ connectDrive(false); }
+}
+
+function finishInit(){
+  document.getElementById('driveScreen').style.display = 'none';
+  document.getElementById('app').style.display = '';
+  if(STORAGE_MODE === 'drive'){
+    document.getElementById('driveStatusDot').style.display = 'inline-block';
+  }
+  switchTab('pedidos');
+  if(CONFIG.pinEnabled && CONFIG.pin){
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('lockScreen').style.display = 'flex';
+    setTimeout(()=>document.getElementById('lockInput').focus(), 50);
+  }
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+  });
+}
+init();
+</script>
+</body>
+</html>
