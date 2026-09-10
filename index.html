@@ -597,7 +597,7 @@
 <script>
 /* ---------------- Configuración de Google Drive ---------------- */
 /* 1) Pega aquí tu Client ID de Google Cloud (tipo "Aplicación web"). */
-const GOOGLE_CLIENT_ID = '808067914394-8ujc2r4tu7ifmi7lmotgbvn0iremv167.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = 'PON_AQUI_TU_CLIENT_ID.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const DRIVE_FILENAME = 'agenda_pastelera_data.json';
 
@@ -1529,6 +1529,17 @@ function escapeHtml(s){
 function escapeAttr(s){ return escapeHtml(s); }
 
 /* ---------------- Init ---------------- */
+function waitForGoogleIdentity(timeoutMs){
+  return new Promise((resolve)=>{
+    const start = Date.now();
+    (function check(){
+      if(typeof google !== 'undefined' && google.accounts && google.accounts.oauth2){ resolve(true); return; }
+      if(Date.now() - start > timeoutMs){ resolve(false); return; }
+      setTimeout(check, 100);
+    })();
+  });
+}
+
 async function init(){
   document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'});
 
@@ -1545,8 +1556,9 @@ async function init(){
     renderDriveConfigError('Falta configurar el Client ID de Google en el código de esta app. Sigue los pasos de configuración que te dieron junto con este archivo.');
     return;
   }
-  if(typeof google === 'undefined' || !google.accounts){
-    renderDriveConfigError('No se pudo cargar el inicio de sesión de Google. Revisa tu conexión a internet y recarga la página.');
+  const googleReady = await waitForGoogleIdentity(6000);
+  if(!googleReady){
+    renderDriveConfigError('No se pudo cargar el inicio de sesión de Google. Revisa tu conexión a internet y recarga la página. Si usas un bloqueador de anuncios/rastreadores, prueba desactivarlo para este sitio.');
     return;
   }
   initGoogleAuth();
