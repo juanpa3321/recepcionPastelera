@@ -399,6 +399,7 @@
   .icon-btn:active{ transform: scale(0.95); }
   .drive-dot{ width:8px; height:8px; border-radius:50%; background: var(--mint); flex-shrink:0; }
   .drive-dot.syncing{ background: var(--butter); animation: pulse 1s infinite; }
+  .drive-dot.error{ background: var(--danger); animation: none; }
   @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
   .lock-screen{
@@ -597,7 +598,7 @@
 <script>
 /* ---------------- Configuración de Google Drive ---------------- */
 /* 1) Pega aquí tu Client ID de Google Cloud (tipo "Aplicación web"). */
-const GOOGLE_CLIENT_ID = '808067914394-8ujc2r4tu7ifmi7lmotgbvn0iremv167.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = 'PON_AQUI_TU_CLIENT_ID.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const DRIVE_FILENAME = 'agenda_pastelera_data.json';
 
@@ -621,6 +622,10 @@ async function loadObj(key, fallback){
   if(STORAGE_MODE === 'drive'){
     return (key in driveState) ? driveState[key] : fallback;
   }
+  if(STORAGE_MODE === 'local'){
+    try{ const v = await idbGet(key); return (v===undefined) ? fallback : v; }
+    catch(e){ return fallback; }
+  }
   try{
     const r = await window.storage.get(key, false);
     return r && r.value ? JSON.parse(r.value) : fallback;
@@ -630,6 +635,11 @@ async function saveObj(key, obj){
   if(STORAGE_MODE === 'drive'){
     driveState[key] = obj;
     scheduleDriveSave();
+    return;
+  }
+  if(STORAGE_MODE === 'local'){
+    try{ await idbSet(key, obj); }
+    catch(e){ showToast('⚠️ No se pudo guardar en este teléfono.'); }
     return;
   }
   try{ await window.storage.set(key, JSON.stringify(obj), false); }
@@ -648,24 +658,101 @@ async function loadAll(){
   CONFIG = config;
 }
 
+/* ---------------- Modo local (IndexedDB, sin internet) ---------------- */
+const IDB_NAME = 'agendaPasteleraDB';
+const IDB_STORE = 'kv';
+let idbInstance = null;
+function idbOpen(){
+  return new Promise((resolve, reject)=>{
+    if(idbInstance){ resolve(idbInstance); return; }
+    if(!('indexedDB' in window)){ reject(new Error('no_indexeddb')); return; }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = ()=>{ req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = ()=>{ idbInstance = req.result; resolve(idbInstance); };
+    req.onerror = ()=> reject(req.error);
+  });
+}
+async function idbGet(key){
+  const db = await idbOpen();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+async function idbSet(key, value){
+  const db = await idbOpen();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(value, key);
+    tx.oncomplete = ()=> resolve(true);
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+
 /* ---------------- Modo Google Drive ---------------- */
 function scheduleDriveSave(){
   clearTimeout(driveSaveTimer);
   driveSaveTimer = setTimeout(driveWriteFile, 900);
   const el = document.getElementById('driveStatusDot');
-  if(el) el.classList.add('syncing');
+  if(el){ el.classList.add('syncing'); el.classList.remove('error'); el.title = 'Guardando en Drive…'; }
 }
+
+function requestDriveTokenSilently(){
+  return new Promise((resolve)=>{
+    if(!driveTokenClient){ resolve(false); return; }
+    const originalCallback = driveTokenClient.callback;
+    driveTokenClient.callback = (resp)=>{
+      driveTokenClient.callback = originalCallback;
+      if(resp && !resp.error){ driveToken = resp.access_token; resolve(true); }
+      else resolve(false);
+    };
+    driveTokenClient.requestAccessToken({ prompt: '' });
+  });
+}
+
+// Wrapper de fetch para Drive: agrega el token y renueva/reintenta una vez si expiró (401).
+async function driveFetch(url, options, isRetry){
+  options = options || {};
+  options.headers = Object.assign({}, options.headers, { 'Authorization': 'Bearer ' + driveToken });
+  const res = await fetch(url, options);
+  if(res.status === 401 && !isRetry){
+    const refreshed = await requestDriveTokenSilently();
+    if(refreshed) return driveFetch(url, options, true);
+  }
+  return res;
+}
+
 async function driveWriteFile(){
-  if(!driveToken || !driveFileId) return;
+  const el = document.getElementById('driveStatusDot');
+  if(!driveToken){ if(el){ el.classList.remove('syncing'); el.classList.add('error'); el.title='No conectado a Drive'; } return; }
+  if(!driveFileId){
+    try{ await driveLoadOrCreateFile(); }
+    catch(e){
+      showToast('⚠️ No se pudo guardar en Drive: no se encontró el archivo.');
+      if(el){ el.classList.remove('syncing'); el.classList.add('error'); el.title='Error al guardar'; }
+      return;
+    }
+  }
   try{
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+    const res = await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
       method:'PATCH',
-      headers:{ 'Authorization':'Bearer '+driveToken, 'Content-Type':'application/json' },
+      headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify(driveState)
     });
-  }catch(e){ showToast('No se pudo guardar en Drive. Revisa tu conexión.'); }
-  const el = document.getElementById('driveStatusDot');
-  if(el) el.classList.remove('syncing');
+    if(!res.ok){
+      const errText = await res.text().catch(()=> '');
+      console.error('Drive save error', res.status, errText);
+      showToast('⚠️ No se pudo guardar en Drive (error ' + res.status + '). Vuelve a intentarlo.');
+      if(el){ el.classList.remove('syncing'); el.classList.add('error'); el.title='Error al guardar en Drive'; }
+      return;
+    }
+    if(el){ el.classList.remove('syncing'); el.classList.remove('error'); el.title='Guardado en Drive'; }
+  }catch(e){
+    showToast('⚠️ No se pudo guardar en Drive. Revisa tu conexión.');
+    if(el){ el.classList.remove('syncing'); el.classList.add('error'); el.title='Error al guardar en Drive'; }
+  }
 }
 
 function initGoogleAuth(){
@@ -683,6 +770,7 @@ function initGoogleAuth(){
         await driveLoadOrCreateFile();
         finishInit();
       }catch(e){
+        console.error('Drive init error', e);
         renderDriveConnectScreen('Hubo un problema leyendo tu Drive. Intenta de nuevo.');
       }
     }
@@ -703,15 +791,21 @@ function disconnectDrive(){
 }
 
 async function driveLoadOrCreateFile(){
-  const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%27${DRIVE_FILENAME}%27&fields=files(id,name)`, {
-    headers:{ 'Authorization':'Bearer '+driveToken }
-  });
+  const searchRes = await driveFetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%27${DRIVE_FILENAME}%27&fields=files(id,name)`);
+  if(!searchRes.ok){
+    const errText = await searchRes.text().catch(()=> '');
+    console.error('Drive search error', searchRes.status, errText);
+    throw new Error('drive_search_failed:' + searchRes.status);
+  }
   const searchData = await searchRes.json();
   if(searchData.files && searchData.files.length){
     driveFileId = searchData.files[0].id;
-    const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
-      headers:{ 'Authorization':'Bearer '+driveToken }
-    });
+    const fileRes = await driveFetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`);
+    if(!fileRes.ok){
+      const errText = await fileRes.text().catch(()=> '');
+      console.error('Drive read error', fileRes.status, errText);
+      throw new Error('drive_read_failed:' + fileRes.status);
+    }
     const text = await fileRes.text();
     try{ driveState = text ? JSON.parse(text) : driveState; }catch(e){ /* archivo vacío o dañado, se usa el estado por defecto */ }
   } else {
@@ -720,12 +814,21 @@ async function driveLoadOrCreateFile(){
     const body =
       `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
       `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(driveState)}\r\n--${boundary}--`;
-    const createRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    const createRes = await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
       method:'POST',
-      headers:{ 'Authorization':'Bearer '+driveToken, 'Content-Type':`multipart/related; boundary=${boundary}` },
+      headers:{ 'Content-Type':`multipart/related; boundary=${boundary}` },
       body
     });
+    if(!createRes.ok){
+      const errText = await createRes.text().catch(()=> '');
+      console.error('Drive create error', createRes.status, errText);
+      throw new Error('drive_create_failed:' + createRes.status);
+    }
     const createData = await createRes.json();
+    if(!createData.id){
+      console.error('Drive create returned no id', createData);
+      throw new Error('drive_create_no_id');
+    }
     driveFileId = createData.id;
   }
   DATA.clientes = driveState.clientes || [];
@@ -1200,6 +1303,14 @@ function openSettingsModal(){
     </div>
     ${CONFIG.pinEnabled ? `<button class="btn-mini danger" style="margin-top:14px;width:100%;justify-content:center;" onclick="closeModal(); lockNow();">🔒 Bloquear ahora</button>` : ''}
     ${STORAGE_MODE==='drive' ? `<button class="btn-mini" style="margin-top:10px;width:100%;justify-content:center;" onclick="disconnectDrive()">☁️ Cambiar de cuenta de Google Drive</button>` : ''}
+    ${STORAGE_MODE==='local' ? `<div class="helper" style="margin-top:14px;">📱 Tus datos se guardan solo en este teléfono/navegador. Descarga copias de seguridad seguido para no perderlos.</div>` : ''}
+    ${(STORAGE_MODE==='local' || STORAGE_MODE==='drive') ? `
+    <div style="display:flex; gap:8px; margin-top:6px;">
+      <button class="btn-mini" style="flex:1;justify-content:center;" onclick="exportBackup()">⬇️ Descargar copia</button>
+      <button class="btn-mini" style="flex:1;justify-content:center;" onclick="triggerImportBackup()">⬆️ Restaurar copia</button>
+    </div>
+    <button class="btn-mini" style="margin-top:10px;width:100%;justify-content:center;" onclick="changeStorageMode()">🔁 Cambiar dónde se guardan los datos</button>
+    ` : ''}
   `);
 }
 
@@ -1551,6 +1662,49 @@ async function init(){
     return;
   }
 
+  document.getElementById('loadingScreen').style.display = 'none';
+  let savedMode = null;
+  try{ savedMode = localStorage.getItem('agendaStorageMode'); }catch(e){}
+
+  if(savedMode === 'local'){
+    STORAGE_MODE = 'local';
+    await loadAll();
+    finishInit();
+    return;
+  }
+  if(savedMode === 'drive'){
+    await initDriveFlow();
+    return;
+  }
+  renderStorageChoiceScreen();
+}
+
+function renderStorageChoiceScreen(){
+  const el = document.getElementById('driveScreen');
+  document.getElementById('app').style.display = 'none';
+  el.innerHTML = `
+    <div class="emoji">🧁📲</div>
+    <h2>¿Dónde quieres guardar tus datos?</h2>
+    <p>Puedes cambiarlo después desde Ajustes ⚙️.</p>
+    <button class="btn-primary" style="max-width:280px; margin-bottom:12px;" onclick="chooseStorageMode('local')">📱 En este teléfono (sin internet)</button>
+    <button class="btn-secondary" style="max-width:280px;" onclick="chooseStorageMode('drive')">☁️ Google Drive (sincroniza entre dispositivos)</button>
+    <p style="font-size:11.5px; margin-top:18px;">"En este teléfono" es más simple y no necesita cuenta, pero los datos solo viven en este navegador — si borras datos de navegación o cambias de celular, se pierden (usa la copia de seguridad en Ajustes para respaldarlos).</p>
+  `;
+  el.style.display = 'flex';
+}
+
+async function chooseStorageMode(mode){
+  try{ localStorage.setItem('agendaStorageMode', mode); }catch(e){}
+  if(mode === 'local'){
+    STORAGE_MODE = 'local';
+    await loadAll();
+    finishInit();
+  } else {
+    await initDriveFlow();
+  }
+}
+
+async function initDriveFlow(){
   STORAGE_MODE = 'drive';
   if(GOOGLE_CLIENT_ID.indexOf('PON_AQUI') !== -1){
     renderDriveConfigError('Falta configurar el Client ID de Google en el código de esta app. Sigue los pasos de configuración que te dieron junto con este archivo.');
@@ -1566,6 +1720,64 @@ async function init(){
   let wasConnected = false;
   try{ wasConnected = localStorage.getItem('agendaDriveConnected') === '1'; }catch(e){}
   if(wasConnected){ connectDrive(false); }
+}
+
+function changeStorageMode(){
+  if(!confirm('¿Cambiar dónde se guardan tus datos? Se cerrará la sesión actual y volverás a elegir. Si tienes datos importantes, descarga primero una copia de seguridad en Ajustes.')) return;
+  try{ localStorage.removeItem('agendaStorageMode'); localStorage.removeItem('agendaDriveConnected'); }catch(e){}
+  location.reload();
+}
+
+/* ---------------- Copia de seguridad (exportar / importar) ---------------- */
+function exportBackup(){
+  const backup = {
+    tipo: 'agenda-pastelera-backup',
+    exportadoEl: new Date().toISOString(),
+    clientes: DATA.clientes, pedidos: DATA.pedidos, productos: DATA.productos, inventario: DATA.inventario,
+    config: CONFIG
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fecha = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `agenda-pastelera-backup-${fecha}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Copia de seguridad descargada');
+}
+
+function triggerImportBackup(){
+  document.getElementById('importFileInput').click();
+}
+
+async function handleImportBackup(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const backup = JSON.parse(text);
+    if(!backup || backup.tipo !== 'agenda-pastelera-backup'){
+      showToast('Ese archivo no parece una copia de seguridad válida');
+      return;
+    }
+    if(!confirm('Esto reemplazará todos los datos actuales de la app con los del archivo. ¿Continuar?')) return;
+    DATA.clientes = backup.clientes || [];
+    DATA.pedidos = backup.pedidos || [];
+    DATA.productos = backup.productos || [];
+    DATA.inventario = backup.inventario || [];
+    CONFIG = Object.assign({ miWhatsapp:'', nombreNegocio:'', infoNegocio:'', pin:'', pinEnabled:false }, backup.config || {});
+    await Promise.all([
+      saveKey('clientes', DATA.clientes), saveKey('pedidos', DATA.pedidos),
+      saveKey('productos', DATA.productos), saveKey('inventario', DATA.inventario),
+      saveObj('config', CONFIG)
+    ]);
+    closeModal();
+    switchTab('pedidos');
+    showToast('Copia de seguridad restaurada ✅');
+  }catch(e){
+    showToast('No se pudo leer ese archivo');
+  }
+  input.value = '';
 }
 
 function finishInit(){
@@ -1589,5 +1801,6 @@ if('serviceWorker' in navigator){
 }
 init();
 </script>
+<input type="file" id="importFileInput" accept="application/json" style="display:none;" onchange="handleImportBackup(this)">
 </body>
 </html>
